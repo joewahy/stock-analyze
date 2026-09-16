@@ -2,12 +2,13 @@ name: Midday digest
 
 on:
   schedule:
-    # 12:00 p.m. America/New_York. GitHub cron is UTC with no DST handling, so
-    # both the EDT (16:00 UTC) and EST (17:00 UTC) equivalents are listed; the
-    # --expect-hour guard in the script lets only the run that lands on noon
-    # Eastern actually send. Weekdays only (trading days).
-    - cron: "0 16 * * 1-5"
-    - cron: "0 17 * * 1-5"
+    # 12:07 p.m. America/New_York. GitHub cron is UTC with no DST handling, so
+    # both the EDT (16:07 UTC) and EST (17:07 UTC) equivalents are listed; the
+    # guard in the script sends only from the cron whose UTC hour is noon
+    # Eastern today, so a late start still sends. The odd minute avoids the
+    # congested top of the hour. Weekdays only (trading days).
+    - cron: "7 16 * * 1-5"
+    - cron: "7 17 * * 1-5"
 
 concurrency:
   group: midday-digest
@@ -30,4 +31,5 @@ jobs:
           DIGEST_GMAIL_USER: ${{ secrets.DIGEST_GMAIL_USER }}
           DIGEST_GMAIL_APP_PASSWORD: ${{ secrets.DIGEST_GMAIL_APP_PASSWORD }}
           DIGEST_RECIPIENT_EMAIL: ${{ secrets.DIGEST_RECIPIENT_EMAIL }}
-        run: npx tsx scripts/run-digest.ts --midday --expect-hour=12
+          SCHEDULE: ${{ github.event.schedule }}
+        run: npx tsx scripts/run-digest.ts --midday --expect-hour=12 --schedule="$SCHEDULE"
