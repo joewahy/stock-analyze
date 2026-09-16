@@ -1,5 +1,6 @@
 import { cached, TTL } from "@/lib/cache";
 import { byDateAsc } from "@/lib/util";
+import { fetchWithRetry } from "./http";
 import type {
   CompanyProfile,
   FundamentalRatios,
@@ -22,7 +23,7 @@ async function fmpGet<T>(
   const url = new URL(BASE_URL + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("apikey", apiKey());
-  const res = await fetch(url.toString());
+  const res = await fetchWithRetry(url.toString(), { label: `FMP ${path}` });
   if (!res.ok) {
     throw new Error(`FMP ${path} failed: ${res.status} ${res.statusText}`);
   }

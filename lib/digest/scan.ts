@@ -19,6 +19,29 @@ const FACTOR_STRONG_THRESHOLD = 60;
 const CONCURRENCY = 5;
 const PROJECTION_HORIZON_DAYS = 30;
 
+// Ranking score, 0-100: 40% how oversold (RSI below 50), 30% how close price
+// sits to the 52-week low, 30% the profitability/growth fundamentals floor.
+export function computeStandoutScore(params: {
+  rsi: number;
+  price: number;
+  range: { low: number; high: number } | null;
+  fundamentalFloor: number;
+}): { score: number; allFactorsStrong: boolean } {
+  const { rsi, price, range, fundamentalFloor } = params;
+  const oversoldScore = clamp(50 - rsi, 0, 50) * 2; // 0-100
+  let proximityToLow = 0;
+  if (range && range.high > range.low) {
+    const position = clamp((price - range.low) / (range.high - range.low), 0, 1);
+    proximityToLow = (1 - position) * 100;
+  }
+  const score = 0.4 * oversoldScore + 0.3 * proximityToLow + 0.3 * fundamentalFloor;
+  const allFactorsStrong =
+    oversoldScore >= FACTOR_STRONG_THRESHOLD &&
+    proximityToLow >= FACTOR_STRONG_THRESHOLD &&
+    fundamentalFloor >= FACTOR_STRONG_THRESHOLD;
+  return { score, allFactorsStrong };
+}
+
 interface ScanOutcome {
   row: DigestRow | null;
   skip: DigestSkip | null;
@@ -69,17 +92,7 @@ async function scanSymbol(symbol: string): Promise<ScanOutcome> {
   }
 
   const range = fiftyTwoWeekRange(priceHistory);
-  const oversoldScore = clamp(50 - rsi, 0, 50) * 2; // 0-100
-  let proximityToLow = 0;
-  if (range && range.high > range.low) {
-    const position = clamp((price - range.low) / (range.high - range.low), 0, 1);
-    proximityToLow = (1 - position) * 100;
-  }
-  const score = 0.4 * oversoldScore + 0.3 * proximityToLow + 0.3 * fundamentalFloor;
-  const allFactorsStrong =
-    oversoldScore >= FACTOR_STRONG_THRESHOLD &&
-    proximityToLow >= FACTOR_STRONG_THRESHOLD &&
-    fundamentalFloor >= FACTOR_STRONG_THRESHOLD;
+  const { score, allFactorsStrong } = computeStandoutScore({ rsi, price, range, fundamentalFloor });
 
   const thesis = buildThesis({ symbol, price, rsi, rsiPeriod: RSI_PERIOD, range, grades });
   const businessSummary = summarizeBusiness(profile?.description ?? null);

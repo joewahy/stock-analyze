@@ -60,6 +60,18 @@ runs the full scan and prints the rendered email (subject + text) to stdout
 without sending anything. Use this to tune the watchlist or thresholds before
 trusting the schedule to send real mail.
 
+## Tests
+
+```bash
+npm test
+npm run typecheck
+```
+
+Unit tests cover the pure math (RSI, projection, 52-week range, the five
+graders, the standout score, sentiment/pulse, thesis text) and the provider
+retry helper. They use Node's built-in test runner and make no network calls.
+Test files sit next to the code they cover as `*.test.ts`.
+
 ## How the numbers are computed
 
 No database — every run fetches from two free-tier data providers, computes

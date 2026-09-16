@@ -55,7 +55,7 @@ async function quoteSymbol(symbol: string): Promise<QuoteOutcome> {
 // close restated, so it would add noise, not signal. Weights: breadth is
 // the live watchlist itself, benchmarks are four ETF proxies, so breadth
 // carries more.
-function computeMiddayPulse(
+export function computeMiddayPulse(
   quotes: MiddayQuote[],
   benchmarkAvgChange: number
 ): MiddayPulse {

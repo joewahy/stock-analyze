@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "digest": "tsx scripts/run-digest.ts",
-    "digest:midday": "tsx scripts/run-digest.ts --midday"
+    "digest:midday": "tsx scripts/run-digest.ts --midday",
+    "test": "node --import tsx --test \"lib/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "nodemailer": "^9.0.5"
