@@ -60,6 +60,20 @@ runs the full scan and prints the rendered email (subject + text) to stdout
 without sending anything. Use this to tune the watchlist or thresholds before
 trusting the schedule to send real mail.
 
+## Running the pipeline without calling Finnhub/FMP
+
+```bash
+npm run digest:mock
+npm run digest:midday:mock
+```
+
+`--mock` (implies `--dry-run`) swaps `fetch` for `lib/providers/mockFetch.ts`,
+which returns deterministic, symbol-seeded synthetic data instead of hitting
+the network. No API keys needed. Use this to iterate on scoring, thesis text,
+or email templates without spending free-tier request budget or waiting out
+429s — the numbers are fake, but every code path (scan, grading, projection,
+rendering) runs for real.
+
 ## Tests
 
 ```bash
@@ -68,9 +82,11 @@ npm run typecheck
 ```
 
 Unit tests cover the pure math (RSI, projection, 52-week range, the five
-graders, the standout score, sentiment/pulse, thesis text) and the provider
-retry helper. They use Node's built-in test runner and make no network calls.
-Test files sit next to the code they cover as `*.test.ts`.
+graders, the standout score, sentiment/pulse, thesis text), the provider
+retry helper, and — via `mockFetch` — an end-to-end run of `runDailyScan`/
+`runMiddayScan` with no network access. They use Node's built-in test runner
+and make no real network calls. Test files sit next to the code they cover as
+`*.test.ts`.
 
 ## How the numbers are computed
 
