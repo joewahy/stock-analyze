@@ -9,6 +9,7 @@ type Mode = "daily" | "midday";
 interface Options {
   mode: Mode;
   dryRun: boolean;
+  mock: boolean;
   expectHour: number | null;
   schedule: string | null;
 }
@@ -17,6 +18,7 @@ function parseArgs(argv: string[]): Options {
   const opts: Options = {
     mode: "daily",
     dryRun: false,
+    mock: false,
     expectHour: null,
     schedule: null,
   };
@@ -24,6 +26,7 @@ function parseArgs(argv: string[]): Options {
     if (arg === "--midday" || arg === "--mode=midday") opts.mode = "midday";
     else if (arg === "--mode=daily") opts.mode = "daily";
     else if (arg === "--dry-run") opts.dryRun = true;
+    else if (arg === "--mock") opts.mock = true;
     else if (arg.startsWith("--expect-hour=")) {
       opts.expectHour = Number(arg.slice("--expect-hour=".length));
     } else if (arg.startsWith("--schedule=")) {
@@ -60,9 +63,14 @@ function scheduledTime(cron: string): Date {
 }
 
 async function main(): Promise<void> {
-  const { mode, dryRun, expectHour, schedule } = parseArgs(
+  const { mode, dryRun, mock, expectHour, schedule } = parseArgs(
     process.argv.slice(2)
   );
+
+  if (mock) {
+    const { installMockFetch } = await import("@/lib/providers/mockFetch");
+    installMockFetch();
+  }
 
   if (expectHour !== null) {
     const hour = easternHour(schedule ? scheduledTime(schedule) : new Date());
@@ -74,14 +82,20 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`Running ${mode} digest${dryRun ? " (dry run)" : ""}...`);
+  // --mock is for exercising the pipeline with fixture data, never for
+  // sending mail with it, so it always implies --dry-run.
+  const effectiveDryRun = dryRun || mock;
+
+  console.log(
+    `Running ${mode} digest${effectiveDryRun ? " (dry run)" : ""}${mock ? " (mock data)" : ""}...`
+  );
 
   const email =
     mode === "midday"
       ? renderMiddayEmail(await runMiddayScan())
       : renderDigestEmail(await runDailyScan());
 
-  if (dryRun) {
+  if (effectiveDryRun) {
     console.log(email.subject);
     console.log("\n" + email.text);
     return;

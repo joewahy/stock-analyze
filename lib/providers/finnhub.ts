@@ -1,4 +1,5 @@
 import { cached, TTL } from "@/lib/cache";
+import { fetchWithRetry } from "./http";
 import type { EarningsSurprise, NewsItem, Quote } from "./types";
 
 const BASE_URL = "https://finnhub.io/api/v1";
@@ -16,7 +17,7 @@ async function finnhubGet<T>(
   const url = new URL(BASE_URL + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("token", apiKey());
-  const res = await fetch(url.toString());
+  const res = await fetchWithRetry(url.toString(), { label: `Finnhub ${path}` });
   if (!res.ok) {
     throw new Error(`Finnhub ${path} failed: ${res.status} ${res.statusText}`);
   }
