@@ -3,6 +3,7 @@ import { runMiddayScan } from "@/lib/digest/midday";
 import { renderDigestEmail } from "@/lib/email/digestEmail";
 import { renderMiddayEmail } from "@/lib/email/middayEmail";
 import { sendDigestEmail } from "@/lib/email/gmail";
+import { escapeHtml } from "@/lib/email/emailTheme";
 
 type Mode = "daily" | "midday";
 
@@ -90,19 +91,45 @@ async function main(): Promise<void> {
     `Running ${mode} digest${effectiveDryRun ? " (dry run)" : ""}${mock ? " (mock data)" : ""}...`
   );
 
-  const email =
-    mode === "midday"
-      ? renderMiddayEmail(await runMiddayScan())
-      : renderDigestEmail(await runDailyScan());
+  try {
+    const email =
+      mode === "midday"
+        ? renderMiddayEmail(await runMiddayScan())
+        : renderDigestEmail(await runDailyScan());
 
-  if (effectiveDryRun) {
-    console.log(email.subject);
-    console.log("\n" + email.text);
-    return;
+    if (effectiveDryRun) {
+      console.log(email.subject);
+      console.log("\n" + email.text);
+      return;
+    }
+
+    await sendDigestEmail(email);
+    console.log(`Sent: ${email.subject}`);
+  } catch (err) {
+    if (!effectiveDryRun) await notifyFailure(mode, err);
+    throw err;
   }
+}
 
-  await sendDigestEmail(email);
-  console.log(`Sent: ${email.subject}`);
+// Best-effort: a run that throws otherwise fails silently from the user's
+// perspective (visible only in the Actions log), which defeats the point of
+// a digest *emailer*. A failure here must never mask the original error or
+// change the process's exit code.
+async function notifyFailure(mode: Mode, err: unknown): Promise<void> {
+  const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
+  try {
+    await sendDigestEmail({
+      subject: `Stock digest failed (${mode})`,
+      text: message,
+      html: `<pre>${escapeHtml(message)}</pre>`,
+    });
+    console.error("Sent failure notification email.");
+  } catch (notifyErr) {
+    console.error(
+      "Also failed to send failure notification email:",
+      notifyErr instanceof Error ? notifyErr.message : notifyErr
+    );
+  }
 }
 
 main().catch((err) => {
