@@ -9,7 +9,6 @@ import {
   FAINT,
   fmtCurrency,
   fmtPct,
-  footnote,
   h1,
   HAIRLINE,
   INK,
@@ -60,10 +59,6 @@ export function renderDigestHtml(result: DigestResult): string {
       readsSection(result.newsHighlights),
       watchlistSection(result),
       skippedSection(result),
-      footnote(
-        "Not advice. Sentiment and target/stop bands are self-computed from price and " +
-          "fundamentals data; “Interesting reads” are third-party headlines. NFA."
-      ),
     ].join("")
   );
 }

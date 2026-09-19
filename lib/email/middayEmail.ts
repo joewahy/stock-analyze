@@ -6,7 +6,6 @@ import {
   INK,
   MUTED,
   changeColor,
-  footnote,
   h1,
   page,
   readsSection,
@@ -71,11 +70,7 @@ function renderHtml(result: MiddayResult): string {
   ];
 
   if (result.newsHighlights.length > 0) {
-    parts.push(
-      readsSection(result.newsHighlights, {
-        note: "Market-wide headlines, ranked by recency and keyword signal — not endorsements.",
-      })
-    );
+    parts.push(readsSection(result.newsHighlights, { note: "" }));
   }
 
   if (result.skipped.length > 0) {
@@ -86,15 +81,6 @@ function renderHtml(result: MiddayResult): string {
       })
     );
   }
-
-  parts.push(
-    footnote(
-      `Intraday snapshot of live prices only — quoted ${result.quotedCount} of ${result.watchlistSize} ` +
-        "watchlist names plus the benchmark ETFs. No RSI, scores, or targets; those are end-of-day " +
-        "(see the morning digest). Quotes via Finnhub, delayed per their free tier. Pulse is a " +
-        "deterministic breadth + benchmark gauge. NFA."
-    )
-  );
 
   return page(parts.join(""));
 }
