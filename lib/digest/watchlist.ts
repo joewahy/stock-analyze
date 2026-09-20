@@ -3,12 +3,13 @@
 // within free-tier FMP/Finnhub request budgets. Edit freely.
 //
 // FMP's free "stable" plan 402s /historical-price-eod for a surprising
-// (and seemingly arbitrary) subset of large-caps — confirmed gated at time
-// of writing: AVGO, ORCL, CRM, HD, MCD, LLY, MA, CAT, PG, ABT, TMO, LIN,
-// ACN, TXN, QCOM, LOW, TJX, BKNG, IBM. They're deliberately left out below;
-// re-check with a quick curl to historical-price-eod before adding a new
-// symbol back in, since a gated symbol just gets silently skipped (with a
-// "Price data unavailable (402)" reason) rather than breaking the scan.
+// (and seemingly arbitrary) subset of tickers — confirmed gated at time of
+// writing: AVGO, ORCL, CRM, HD, MCD, LLY, MA, CAT, PG, ABT, TMO, LIN, ACN,
+// TXN, QCOM, LOW, TJX, BKNG, IBM, RDDT, NBIS, IREN. They're deliberately
+// left out below; re-check with a quick curl to historical-price-eod before
+// adding a new symbol back in, since a gated symbol just gets silently
+// skipped (with a "Price data unavailable (402)" reason) rather than
+// breaking the scan.
 export const DEFAULT_WATCHLIST: string[] = [
   // Tech
   "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "ADBE", "CSCO", "INTC", "TSLA",
@@ -22,6 +23,4 @@ export const DEFAULT_WATCHLIST: string[] = [
   "XOM", "CVX", "GE", "BA",
   // Communication services
   "DIS", "NFLX", "T",
-  // Growth / momentum
-  "RDDT", "NBIS", "IREN",
 ];

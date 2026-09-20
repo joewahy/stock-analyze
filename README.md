@@ -41,12 +41,12 @@ doesn't touch it at all, so mock runs never show deltas.
 Code lives in `lib/digest/*`, `lib/email/*`, and `scripts/run-digest.ts`.
 
 **Watchlist**: `lib/digest/watchlist.ts`, ~30 liquid large-caps. FMP's free
-tier 402s historical prices for a chunk of large-caps (confirmed at time of
+tier 402s historical prices for a chunk of tickers (confirmed at time of
 writing: AVGO, ORCL, CRM, HD, MCD, LLY, MA, CAT, PG, ABT, TMO, LIN, ACN, TXN,
-QCOM, LOW, TJX, BKNG, IBM) — those are already excluded from the default list.
-A gated symbol just gets silently skipped with a clear reason (data
-unavailable, not a "didn't qualify" judgment) instead of breaking the scan,
-so it's safe to mess around with the list.
+QCOM, LOW, TJX, BKNG, IBM, RDDT, NBIS, IREN) — those are already excluded
+from the default list. A gated symbol just gets silently skipped with a
+clear reason (data unavailable, not a "didn't qualify" judgment) instead of
+breaking the scan, so it's safe to mess around with the list.
 
 ## The midday update
 
