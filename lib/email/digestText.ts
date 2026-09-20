@@ -1,5 +1,5 @@
 import type { DigestResult } from "@/lib/digest/types";
-import { fmtCurrency, fmtPct, relativeTime } from "./emailTheme";
+import { fmtCurrency, fmtDelta, fmtPct, relativeTime } from "./emailTheme";
 import { flagFor } from "./digestHtml";
 
 export function renderDigestText(result: DigestResult): string {
@@ -32,11 +32,15 @@ export function renderDigestText(result: DigestResult): string {
     lines.push("  None today.");
   } else {
     for (const c of result.standouts) {
+      const rsiDelta = c.delta ? ` (${fmtDelta(c.delta.rsiDelta)})` : "";
+      const scoreDelta = c.delta ? ` (${fmtDelta(c.delta.scoreDelta)})` : "";
       lines.push(`${c.symbol} — ${c.name}${c.allFactorsStrong ? " [★ STRONG SIGNAL]" : ""}`);
       lines.push(
         `  ${fmtCurrency(c.price)} (${fmtPct(c.changePercent)}) · RSI(14) ${c.rsi.toFixed(
           0
-        )} · score ${c.score.toFixed(0)}/100${flagFor(c) ? ` · ${flagFor(c)}` : ""}`
+        )}${rsiDelta} · score ${c.score.toFixed(0)}/100${scoreDelta}${
+          flagFor(c) ? ` · ${flagFor(c)}` : ""
+        }`
       );
       lines.push(`  ${c.thesis}`);
       if (c.businessSummary) {
@@ -78,12 +82,13 @@ export function renderDigestText(result: DigestResult): string {
   for (const r of result.rows) {
     const star = standoutSymbols.has(r.symbol) ? "* " : "  ";
     const flag = flagFor(r);
+    const scoreDelta = r.delta ? ` (${fmtDelta(r.delta.scoreDelta)})` : "";
     lines.push(
       `${star}${r.symbol.padEnd(6)} ${fmtCurrency(r.price).padStart(9)} ${fmtPct(
         r.changePercent
       ).padStart(8)}  RSI ${r.rsi.toFixed(0).padStart(3)}  score ${r.score
         .toFixed(0)
-        .padStart(3)}${flag ? `  ${flag}` : ""}`
+        .padStart(3)}${scoreDelta}${flag ? `  ${flag}` : ""}`
     );
   }
   lines.push("");
@@ -95,7 +100,7 @@ export function renderDigestText(result: DigestResult): string {
   }
 
   lines.push(
-    "Target/stop are a statistical 30-day +/-1 std-dev band from historical volatility, not a guarantee. Market sentiment is a deterministic breadth/RSI/benchmark gauge, not a third-party index. Upcoming events are watchlist earnings dates from Finnhub's calendar (can shift). Interesting reads are third-party headlines, ranked by recency/keywords, not endorsements. NFA."
+    "Target/stop are a statistical 30-day +/-1 std-dev band from historical volatility, not a guarantee. Market sentiment is a deterministic breadth/RSI/benchmark gauge, not a third-party index. Upcoming events are watchlist earnings dates from Finnhub's calendar (can shift). Interesting reads are third-party headlines, ranked by recency/keywords, not endorsements. Deltas in parentheses are vs. the previous morning digest, blank for a symbol with no prior run. NFA."
   );
 
   return lines.join("\n");

@@ -50,6 +50,25 @@ test("runDailyScan produces a full digest from mock data alone", async () => {
   }
 });
 
+test("runDailyScan wires a prior snapshot into each row's delta", async () => {
+  const watchlist = ["AAPL", "MSFT"];
+  const withoutSnapshot = await runDailyScan(watchlist);
+  assert.ok(withoutSnapshot.rows.every((r) => r.delta === null));
+
+  const previousSnapshot = {
+    scannedAt: "2024-01-01T00:00:00.000Z",
+    bySymbol: Object.fromEntries(
+      withoutSnapshot.rows.map((r) => [r.symbol, { score: r.score - 5, rsi: r.rsi + 2, price: r.price }])
+    ),
+  };
+  const withSnapshot = await runDailyScan(watchlist, previousSnapshot);
+  for (const row of withSnapshot.rows) {
+    assert.ok(row.delta);
+    assert.equal(Math.round(row.delta.scoreDelta), 5);
+    assert.equal(Math.round(row.delta.rsiDelta), -2);
+  }
+});
+
 test("runMiddayScan produces quotes from mock data alone", async () => {
   const watchlist = ["AAPL", "MSFT", "GOOGL"];
   const result = await runMiddayScan(watchlist);

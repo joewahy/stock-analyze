@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeStandoutScore } from "./scan";
+import { computeDelta, computeStandoutScore } from "./scan";
 import { assertClose } from "@/lib/testHelpers";
 
 const range = { low: 100, high: 200 };
@@ -34,4 +34,19 @@ test("computeStandoutScore flags allFactorsStrong only when all three clear 60",
   // RSI 20 -> oversold 60; price at low -> 100; floor 60.
   assert.equal(computeStandoutScore({ rsi: 20, price: 100, range, fundamentalFloor: 60 }).allFactorsStrong, true);
   assert.equal(computeStandoutScore({ rsi: 20, price: 100, range, fundamentalFloor: 59 }).allFactorsStrong, false);
+});
+
+test("computeDelta is null without a prior snapshot entry", () => {
+  assert.equal(computeDelta(undefined, { score: 50, rsi: 40, price: 100 }), null);
+});
+
+test("computeDelta diffs score/RSI and computes price % change vs. the prior entry", () => {
+  const delta = computeDelta(
+    { score: 42, rsi: 50, price: 100 },
+    { score: 55, rsi: 44, price: 110 }
+  );
+  assert.ok(delta);
+  assertClose(delta.scoreDelta, 13);
+  assertClose(delta.rsiDelta, -6);
+  assertClose(delta.priceChangePercent, 10);
 });

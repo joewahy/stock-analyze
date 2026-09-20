@@ -16,6 +16,7 @@ function row(rsi: number, changePercent: number): DigestRow {
     overbought: false,
     score: 50,
     allFactorsStrong: false,
+    delta: null,
     grades: { valuation: 50, growth: 50, profitability: 50, momentum: 50, epsRevenue: 50 },
     thesis: "",
     businessSummary: null,

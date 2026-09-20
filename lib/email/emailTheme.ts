@@ -33,6 +33,12 @@ export function fmtPct(n: number): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 }
 
+// Signed whole-number delta, e.g. score/RSI vs. the prior snapshot.
+export function fmtDelta(n: number): string {
+  const rounded = Math.round(n);
+  return `${rounded > 0 ? "+" : ""}${rounded}`;
+}
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

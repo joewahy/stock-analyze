@@ -22,4 +22,6 @@ export const DEFAULT_WATCHLIST: string[] = [
   "XOM", "CVX", "GE", "BA",
   // Communication services
   "DIS", "NFLX", "T",
+  // Growth / momentum
+  "RDDT", "NBIS", "IREN",
 ];

@@ -29,6 +29,14 @@ Goes out once per trading day. Four parts:
    RSI, score, oversold/overbought flag), so nothing gets hidden just because
    it didn't stand out.
 
+Score and RSI both show a **day-over-day delta** — e.g. `score 62 (+8)` — vs.
+the previous morning digest, in parentheses next to the number. It's blank
+for a symbol with no prior run (first run ever, or newly added to the
+watchlist). The prior values live in `data/last-scan.json`, written after each real send
+and committed back to the repo by the workflow (see `lib/digest/snapshot.ts`).
+A plain `--dry-run` reads that file for preview but never writes it; `--mock`
+doesn't touch it at all, so mock runs never show deltas.
+
 Code lives in `lib/digest/*`, `lib/email/*`, and `scripts/run-digest.ts`.
 
 **Watchlist**: `lib/digest/watchlist.ts`, ~30 liquid large-caps. FMP's free
@@ -201,7 +209,9 @@ expect to-the-minute delivery.
 
 - **No database** — every run re-fetches from the providers (through the
   in-memory cache, which only lives as long as the process). Fine for
-  single-user use.
+  single-user use. The one exception is `data/last-scan.json`, a small
+  committed snapshot of yesterday's score/RSI/price used only to render the
+  digest's day-over-day deltas — not a cache of provider responses.
 - **FMP field names**: FMP has renamed fields across API versions before.
   `lib/providers/fmp.ts` tries a few known aliases per metric
   (`pickNumber`/`pickString` helpers) so a minor rename doesn't silently break
