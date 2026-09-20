@@ -8,6 +8,7 @@ import {
   escapeHtml,
   FAINT,
   fmtCurrency,
+  fmtDelta,
   fmtPct,
   h1,
   HAIRLINE,
@@ -46,6 +47,14 @@ function flagChip(row: DigestRow): string {
   if (!label) return "";
   const [bg, fg] = row.overbought ? ["#f6eceb", DOWN] : ["#eef1f4", ACCENT];
   return `<span style="display:inline-block;background:${bg};color:${fg};border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600;">${label}</span>`;
+}
+
+// "(+8)" in green / "(-8)" in red / "(0)" in faint gray — change vs. the
+// previous morning snapshot, shown next to RSI and score.
+function deltaSpan(n: number): string {
+  const rounded = Math.round(n);
+  const color = rounded === 0 ? FAINT : changeColor(rounded);
+  return `<span style="color:${color};font-size:11px;">(${fmtDelta(n)})</span>`;
 }
 
 export function renderDigestHtml(result: DigestResult): string {
@@ -151,8 +160,10 @@ function standoutsSection(result: DigestResult): string {
             &nbsp;<span style="color:${changeColor(c.changePercent)};font-weight:600;">${fmtPct(
               c.changePercent
             )}</span>
-            &nbsp;·&nbsp; RSI ${c.rsi.toFixed(0)}
-            &nbsp;·&nbsp; score ${c.score.toFixed(0)}
+            &nbsp;·&nbsp; RSI ${c.rsi.toFixed(0)}${c.delta ? ` ${deltaSpan(c.delta.rsiDelta)}` : ""}
+            &nbsp;·&nbsp; score ${c.score.toFixed(0)}${
+              c.delta ? ` ${deltaSpan(c.delta.scoreDelta)}` : ""
+            }
             ${flagChip(c) ? `&nbsp; ${flagChip(c)}` : ""}
           </div>
           <div style="height:4px;background:#e7ebef;border-radius:999px;overflow:hidden;margin-bottom:10px;">
@@ -202,7 +213,7 @@ function standoutsSection(result: DigestResult): string {
   return section({
     label: `Standouts · ${result.standouts.length}`,
     body: cards,
-    note: "Ranked by a blended oversold + proximity-to-low + fundamentals score. ★ STRONG = strong on all three factors individually. Target/stop are a 30-day ±1σ band from historical volatility.",
+    note: "Ranked by a blended oversold + proximity-to-low + fundamentals score. ★ STRONG = strong on all three factors individually. Target/stop are a 30-day ±1σ band from historical volatility. (±N) is the change vs. the previous morning digest.",
   });
 }
 
@@ -231,7 +242,7 @@ function watchlistSection(result: DigestResult): string {
         )}</td>
         <td style="padding:6px 0 6px 8px;font-size:13px;color:${INK};text-align:right;">${r.score.toFixed(
           0
-        )}</td>
+        )}${r.delta ? ` ${deltaSpan(r.delta.scoreDelta)}` : ""}</td>
         <td style="padding:6px 0 6px 10px;font-size:11px;color:${MUTED};text-align:right;white-space:nowrap;">${flag}</td>
       </tr>`;
     })

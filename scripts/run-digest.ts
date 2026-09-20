@@ -1,5 +1,6 @@
 import { runDailyScan } from "@/lib/digest/scan";
 import { runMiddayScan } from "@/lib/digest/midday";
+import { buildSnapshot, loadSnapshot, saveSnapshot } from "@/lib/digest/snapshot";
 import { renderDigestEmail } from "@/lib/email/digestEmail";
 import { renderMiddayEmail } from "@/lib/email/middayEmail";
 import { sendDigestEmail } from "@/lib/email/gmail";
@@ -92,10 +93,23 @@ async function main(): Promise<void> {
   );
 
   try {
-    const email =
-      mode === "midday"
-        ? renderMiddayEmail(await runMiddayScan())
-        : renderDigestEmail(await runDailyScan());
+    if (mode === "midday") {
+      const email = renderMiddayEmail(await runMiddayScan());
+      if (effectiveDryRun) {
+        console.log(email.subject);
+        console.log("\n" + email.text);
+        return;
+      }
+      await sendDigestEmail(email);
+      console.log(`Sent: ${email.subject}`);
+      return;
+    }
+
+    // --mock data has no relation to a real prior day, so it never reads or
+    // writes the real snapshot on disk.
+    const previousSnapshot = mock ? null : loadSnapshot();
+    const result = await runDailyScan(undefined, previousSnapshot);
+    const email = renderDigestEmail(result);
 
     if (effectiveDryRun) {
       console.log(email.subject);
@@ -105,6 +119,7 @@ async function main(): Promise<void> {
 
     await sendDigestEmail(email);
     console.log(`Sent: ${email.subject}`);
+    saveSnapshot(buildSnapshot(result));
   } catch (err) {
     if (!effectiveDryRun) await notifyFailure(mode, err);
     throw err;

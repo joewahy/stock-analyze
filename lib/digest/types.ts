@@ -1,3 +1,12 @@
+// Change since the previous morning snapshot (see lib/digest/snapshot.ts),
+// not today's intraday changePercent. Null when there's no prior entry for
+// the symbol (first run, or a symbol new to the watchlist).
+export interface RowDelta {
+  scoreDelta: number;
+  rsiDelta: number;
+  priceChangePercent: number;
+}
+
 export interface DigestRow {
   symbol: string;
   name: string;
@@ -8,6 +17,7 @@ export interface DigestRow {
   overbought: boolean;
   score: number;
   allFactorsStrong: boolean;
+  delta: RowDelta | null;
   grades: {
     valuation: number;
     growth: number;

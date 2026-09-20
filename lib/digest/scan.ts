@@ -9,7 +9,8 @@ import { DEFAULT_WATCHLIST } from "./watchlist";
 import { fetchMarketBriefing, computeMarketSentiment } from "./market";
 import { fetchUpcomingEvents } from "./events";
 import { fetchNewsHighlights } from "./news";
-import type { DigestRow, DigestResult, DigestSkip } from "./types";
+import type { Snapshot, SnapshotEntry } from "./snapshot";
+import type { DigestRow, DigestResult, DigestSkip, RowDelta } from "./types";
 
 const RSI_PERIOD = 14;
 const RSI_OVERSOLD_THRESHOLD = 45;
@@ -47,12 +48,30 @@ interface ScanOutcome {
   skip: DigestSkip | null;
 }
 
+// Null when the symbol has no prior snapshot entry (first run ever, or a
+// symbol just added to the watchlist) — the digest shows no delta rather
+// than a misleading one against nothing.
+export function computeDelta(
+  previous: SnapshotEntry | undefined,
+  current: { score: number; rsi: number; price: number }
+): RowDelta | null {
+  if (!previous) return null;
+  return {
+    scoreDelta: current.score - previous.score,
+    rsiDelta: current.rsi - previous.rsi,
+    priceChangePercent: ((current.price - previous.price) / previous.price) * 100,
+  };
+}
+
 // Builds one row for (almost) every watchlist symbol — scoring and ranking
 // happen after the fact (see runDailyScan), not as a qualification gate.
 // A symbol only ends up in `skipped` when we genuinely can't compute
 // numbers for it (missing price history, RSI, or fundamentals), not
 // because it looked unattractive.
-async function scanSymbol(symbol: string): Promise<ScanOutcome> {
+async function scanSymbol(
+  symbol: string,
+  previousEntry: SnapshotEntry | undefined
+): Promise<ScanOutcome> {
   const { bundle, errors } = await fetchSignalData(symbol);
   const { quote, priceHistory, profile } = bundle;
 
@@ -108,6 +127,7 @@ async function scanSymbol(symbol: string): Promise<ScanOutcome> {
     overbought: rsi >= RSI_OVERBOUGHT_THRESHOLD,
     score,
     allFactorsStrong,
+    delta: computeDelta(previousEntry, { score, rsi, price }),
     grades: {
       valuation: grades.valuation.score,
       growth: grades.growth.score,
@@ -127,10 +147,13 @@ async function scanSymbol(symbol: string): Promise<ScanOutcome> {
 }
 
 export async function runDailyScan(
-  watchlist: string[] = DEFAULT_WATCHLIST
+  watchlist: string[] = DEFAULT_WATCHLIST,
+  previousSnapshot: Snapshot | null = null
 ): Promise<DigestResult> {
   const [outcomes, marketBriefing, upcomingEventsRaw] = await Promise.all([
-    mapWithConcurrency(watchlist, CONCURRENCY, scanSymbol),
+    mapWithConcurrency(watchlist, CONCURRENCY, (symbol) =>
+      scanSymbol(symbol, previousSnapshot?.bySymbol[symbol])
+    ),
     fetchMarketBriefing(),
     fetchUpcomingEvents(watchlist),
   ]);
