@@ -5,6 +5,7 @@ import * as finnhub from "./finnhub";
 import * as fmp from "./fmp";
 import { runDailyScan } from "@/lib/digest/scan";
 import { runMiddayScan } from "@/lib/digest/midday";
+import { renderWeeklyRecapEmail } from "@/lib/email/weeklyEmail";
 
 installMockFetch();
 
@@ -66,6 +67,34 @@ test("runDailyScan wires a prior snapshot into each row's delta", async () => {
     assert.ok(row.delta);
     assert.equal(Math.round(row.delta.scoreDelta), 5);
     assert.equal(Math.round(row.delta.rsiDelta), -2);
+  }
+});
+
+test("renderWeeklyRecapEmail handles a missing week-start snapshot", async () => {
+  const watchlist = ["AAPL", "MSFT"];
+  const result = await runDailyScan(watchlist);
+  const email = renderWeeklyRecapEmail(result, null);
+
+  assert.match(email.subject, /weekly recap/);
+  assert.match(email.text, /Not enough history yet/);
+  assert.match(email.html, /Not enough history yet/);
+});
+
+test("renderWeeklyRecapEmail renders per-symbol deltas against a week-start snapshot", async () => {
+  const watchlist = ["AAPL", "MSFT"];
+  const result = await runDailyScan(watchlist);
+  const weekStart = {
+    scannedAt: "2024-01-01T00:00:00.000Z",
+    bySymbol: Object.fromEntries(
+      result.rows.map((r) => [r.symbol, { score: r.score - 5, rsi: r.rsi + 2, price: r.price * 0.95 }])
+    ),
+  };
+  const withDeltas = await runDailyScan(watchlist, weekStart);
+  const email = renderWeeklyRecapEmail(withDeltas, weekStart);
+
+  assert.doesNotMatch(email.text, /Not enough history yet/);
+  for (const row of withDeltas.rows) {
+    assert.ok(row.delta);
   }
 });
 

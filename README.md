@@ -3,7 +3,8 @@
 A personal, single-user tool that emails you a daily stock digest: it scans a
 curated watchlist every trading morning and just... sends it. No "clear the
 bar" gate, no gatekeeping — you get the mail every day. There's also an
-optional, lighter midday update that goes out during the session.
+optional, lighter midday update that goes out during the session, and a
+Friday weekly recap of how the watchlist moved over the week.
 
 Not investment advice (obviously). Every target/stop in the mail is a
 statistical 30-day ±1σ band from historical volatility, not a promise. Don't
@@ -58,6 +59,18 @@ deliberately **no RSI, scores, targets, or stop-losses**; those come from
 end-of-day data that doesn't move through the session, and that's what the
 morning digest is for. See `lib/digest/midday.ts` and
 `lib/email/middayEmail.ts`.
+
+## The weekly recap
+
+`npm run digest:weekly` sends a Friday-afternoon (after close) email summarizing
+how the watchlist moved over the week: benchmark levels and today's sentiment,
+then price and score movers (biggest gainers/losers, biggest score
+improvements/declines) and a full watchlist table, all measured against
+Monday's morning scan rather than yesterday's. It reuses `runDailyScan` — the
+"delta" on each row just means something different depending on which
+snapshot it's diffed against (see below). The very first week has no Monday
+snapshot to compare against, so it sends a plain "not enough history yet"
+note instead of movers. See `lib/email/weeklyEmail.ts`.
 
 ## Previewing a digest without sending mail
 
@@ -185,14 +198,20 @@ changes the process's exit code. See `notifyFailure` in
 
 ## Scheduling with GitHub Actions
 
-Two workflows in [`.github/workflows/`](.github/workflows) run the script:
-`digest-morning.yml` (7:00 a.m. ET) and `digest-midday.yml` (12:00 p.m. ET),
-weekdays only.
+Three workflows in [`.github/workflows/`](.github/workflows) run the script:
+`digest-morning.yml` (7:00 a.m. ET, weekdays), `digest-midday.yml` (12:00 p.m.
+ET, weekdays), and `digest-weekly.yml` (4:30 p.m. ET, Fridays only).
 
 1. Push this repo to GitHub.
 2. **Settings → Secrets and variables → Actions → New repository secret** —
    add all five variables from the table above.
-3. That's it. The workflows are live as soon as they're on the default
+3. **Settings → Actions → General → Workflow permissions** — set to "Read and
+   write permissions". `digest-morning.yml` commits the snapshot files under
+   `data/` back to the repo after each send, which needs a token that can
+   push. If your default branch has protection rules that block direct
+   pushes (even from Actions), that commit step will fail — either exempt the
+   `github-actions[bot]` actor or drop the day-over-day/weekly deltas.
+4. That's it. The workflows are live as soon as they're on the default
    branch. They only run on their cron — no manual trigger. To test the
    wiring, do a local dry run (see "Local runs" above), or temporarily bolt a
    `workflow_dispatch:` trigger back onto the workflow.
@@ -209,9 +228,10 @@ expect to-the-minute delivery.
 
 - **No database** — every run re-fetches from the providers (through the
   in-memory cache, which only lives as long as the process). Fine for
-  single-user use. The one exception is `data/last-scan.json`, a small
-  committed snapshot of yesterday's score/RSI/price used only to render the
-  digest's day-over-day deltas — not a cache of provider responses.
+  single-user use. The one exception is two small JSON files under `data/`
+  (`last-scan.json`, `week-start-scan.json`), committed by the morning
+  workflow and used only to render the daily and weekly deltas — not a cache
+  of provider responses. See `lib/digest/snapshot.ts`.
 - **FMP field names**: FMP has renamed fields across API versions before.
   `lib/providers/fmp.ts` tries a few known aliases per metric
   (`pickNumber`/`pickString` helpers) so a minor rename doesn't silently break

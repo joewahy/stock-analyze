@@ -5,8 +5,10 @@
   "scripts": {
     "digest": "tsx scripts/run-digest.ts",
     "digest:midday": "tsx scripts/run-digest.ts --midday",
+    "digest:weekly": "tsx scripts/run-digest.ts --weekly",
     "digest:mock": "tsx scripts/run-digest.ts --mock",
     "digest:midday:mock": "tsx scripts/run-digest.ts --midday --mock",
+    "digest:weekly:mock": "tsx scripts/run-digest.ts --weekly --mock",
     "test": "node --import tsx --test \"lib/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },

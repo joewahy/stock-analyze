@@ -38,6 +38,9 @@ jobs:
         run: npx tsx scripts/run-digest.ts --expect-hour=7 --schedule="$SCHEDULE"
       # A skipped run (wrong cron leg) or a failed send never reaches here, so
       # this only fires after a real digest email went out with fresh scores.
+      # week-start-scan.json only changes on Mondays (the weekly recap's
+      # baseline); `git add` on a path that doesn't exist yet is fine as long
+      # as at least one of the two does.
       - name: Commit updated snapshot
         run: |
           if [ ! -f data/last-scan.json ]; then
@@ -45,6 +48,7 @@ jobs:
             exit 0
           fi
           git add data/last-scan.json
+          [ -f data/week-start-scan.json ] && git add data/week-start-scan.json
           if git diff --cached --quiet; then
             echo "No snapshot changes."
             exit 0

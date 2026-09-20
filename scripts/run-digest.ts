@@ -1,12 +1,18 @@
 import { runDailyScan } from "@/lib/digest/scan";
 import { runMiddayScan } from "@/lib/digest/midday";
-import { buildSnapshot, loadSnapshot, saveSnapshot } from "@/lib/digest/snapshot";
+import {
+  buildSnapshot,
+  loadSnapshot,
+  saveSnapshot,
+  WEEK_START_SNAPSHOT_PATH,
+} from "@/lib/digest/snapshot";
 import { renderDigestEmail } from "@/lib/email/digestEmail";
 import { renderMiddayEmail } from "@/lib/email/middayEmail";
+import { renderWeeklyRecapEmail } from "@/lib/email/weeklyEmail";
 import { sendDigestEmail } from "@/lib/email/gmail";
 import { escapeHtml } from "@/lib/email/emailTheme";
 
-type Mode = "daily" | "midday";
+type Mode = "daily" | "midday" | "weekly";
 
 interface Options {
   mode: Mode;
@@ -26,6 +32,7 @@ function parseArgs(argv: string[]): Options {
   };
   for (const arg of argv) {
     if (arg === "--midday" || arg === "--mode=midday") opts.mode = "midday";
+    else if (arg === "--weekly" || arg === "--mode=weekly") opts.mode = "weekly";
     else if (arg === "--mode=daily") opts.mode = "daily";
     else if (arg === "--dry-run") opts.dryRun = true;
     else if (arg === "--mock") opts.mock = true;
@@ -64,6 +71,16 @@ function scheduledTime(cron: string): Date {
   return at;
 }
 
+// "Mon", "Tue", etc. in America/New_York — used to capture the week-start
+// snapshot only from the Monday morning run, regardless of what UTC day it
+// is when a late-started scheduled run actually executes.
+function easternWeekday(at: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+  }).format(at);
+}
+
 async function main(): Promise<void> {
   const { mode, dryRun, mock, expectHour, schedule } = parseArgs(
     process.argv.slice(2)
@@ -74,8 +91,10 @@ async function main(): Promise<void> {
     installMockFetch();
   }
 
+  const at = schedule ? scheduledTime(schedule) : new Date();
+
   if (expectHour !== null) {
-    const hour = easternHour(schedule ? scheduledTime(schedule) : new Date());
+    const hour = easternHour(at);
     if (hour !== expectHour) {
       console.log(
         `Eastern hour is ${hour}, expected ${expectHour} — skipping this run.`
@@ -105,6 +124,22 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (mode === "weekly") {
+      // Read-only: the weekly recap never writes a snapshot, it just diffs
+      // today's scan against whatever Monday's run captured.
+      const weekStart = mock ? null : loadSnapshot(WEEK_START_SNAPSHOT_PATH);
+      const result = await runDailyScan(undefined, weekStart);
+      const email = renderWeeklyRecapEmail(result, weekStart);
+      if (effectiveDryRun) {
+        console.log(email.subject);
+        console.log("\n" + email.text);
+        return;
+      }
+      await sendDigestEmail(email);
+      console.log(`Sent: ${email.subject}`);
+      return;
+    }
+
     // --mock data has no relation to a real prior day, so it never reads or
     // writes the real snapshot on disk.
     const previousSnapshot = mock ? null : loadSnapshot();
@@ -120,6 +155,11 @@ async function main(): Promise<void> {
     await sendDigestEmail(email);
     console.log(`Sent: ${email.subject}`);
     saveSnapshot(buildSnapshot(result));
+    // Captured once a week, from Monday's run, as the weekly recap's
+    // baseline — the other four weekdays leave it untouched.
+    if (easternWeekday(at) === "Mon") {
+      saveSnapshot(buildSnapshot(result), WEEK_START_SNAPSHOT_PATH);
+    }
   } catch (err) {
     if (!effectiveDryRun) await notifyFailure(mode, err);
     throw err;

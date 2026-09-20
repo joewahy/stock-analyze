@@ -1,0 +1,35 @@
+name: Weekly recap
+
+on:
+  schedule:
+    # 4:30 p.m. America/New_York, Fridays only (after the close). GitHub
+    # cron is UTC with no DST handling, so both the EDT (20:30 UTC) and EST
+    # (21:30 UTC) equivalents are listed; the guard in the script sends only
+    # from the cron whose UTC hour is 4pm Eastern today, so a late start
+    # still sends. The odd minute avoids the congested top of the hour.
+    - cron: "30 20 * * 5"
+    - cron: "30 21 * * 5"
+
+concurrency:
+  group: weekly-recap
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Send weekly recap
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          DIGEST_GMAIL_USER: ${{ secrets.DIGEST_GMAIL_USER }}
+          DIGEST_GMAIL_APP_PASSWORD: ${{ secrets.DIGEST_GMAIL_APP_PASSWORD }}
+          DIGEST_RECIPIENT_EMAIL: ${{ secrets.DIGEST_RECIPIENT_EMAIL }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: npx tsx scripts/run-digest.ts --weekly --expect-hour=16 --schedule="$SCHEDULE"

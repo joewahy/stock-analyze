@@ -15,6 +15,11 @@ export interface Snapshot {
 
 export const SNAPSHOT_PATH = "data/last-scan.json";
 
+// Captured once, from the Monday morning run, and left untouched the rest of
+// the week — the weekly recap diffs Friday's scan against this to get a
+// week-over-week delta instead of the daily one in SNAPSHOT_PATH.
+export const WEEK_START_SNAPSHOT_PATH = "data/week-start-scan.json";
+
 // Missing or corrupt is just "no prior data" — a symbol new to the
 // watchlist hits this same path, so day-over-day deltas degrade to null
 // rather than failing the run.
